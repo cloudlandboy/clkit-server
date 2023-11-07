@@ -201,6 +201,74 @@ class JavaTypeConverter implements LanguageTypeConverter {
         "needImport": false
     }
 
+    private javaToMysqlTypeMapping = {
+        "int": {
+            type: "INT",
+            param: "(11)"
+        },
+        "integer": {
+            type: "INT",
+            param: "(11)"
+        },
+        "long": {
+            type: "BIGINT",
+            param: "(20)"
+        },
+        "short": {
+            type: "SMALLINT",
+            param: "(6)"
+        },
+        "byte": {
+            type: "TINYINT",
+            param: "(4)"
+        },
+        "float": {
+            type: "FLOAT",
+            param: ""
+        },
+        "double": {
+            type: "DOUBLE",
+            param: ""
+        },
+        "bigDecimal": {
+            type: "DECIMAL",
+            param: "(10, 2)"
+        },
+        "localDate": {
+            type: "DATE",
+            param: ""
+        },
+        "date": {
+            type: "DATETIME",
+            param: ""
+        },
+        "localDateTime": {
+            type: "DATETIME",
+            param: ""
+        },
+        "localTime": {
+            type: "TIME",
+            param: ""
+        },
+        "boolean": {
+            type: "TINYINT",
+            param: "(1)"
+        },
+        "string": {
+            type: "VARCHAR",
+            param: "(255)"
+        },
+        "character": {
+            type: "VARCHAR",
+            param: "(255)"
+        },
+        "char": {
+            type: "CHAR",
+            param: ""
+        },
+    }
+
+
     private typeJson = {
         "int": {
             "type": "Integer",
@@ -264,7 +332,7 @@ class JavaTypeConverter implements LanguageTypeConverter {
         },
         "geometry": {
             "type": "byte[]",
-            "package": "无",
+            "package": "",
             "needImport": false
         },
         "uuid": {

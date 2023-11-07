@@ -19,7 +19,7 @@ export class OfficeService {
 
     constructor(private configService: ConfigService) {
         let obp = configService.get<string>('LIBREOFFICE_HOME');
-        this.converter = new LibreOfficeConverter(obp, 'C:\\Users\\clboy\\Desktop\\tmp', this.platformProcess);
+        this.converter = new LibreOfficeConverter(obp, this.tempDir, this.platformProcess);
     }
 
     async convert(dto: any, file: Express.Multer.File, res: Response): Promise<StreamableFile> {
@@ -28,7 +28,8 @@ export class OfficeService {
         }
 
         try {
-            res.header('Content-Type', fileType[dto.toType].contentType);
+            const ct = fileType[dto.toType].contentType;
+            res.header('Content-Type', ct);
             return this.converter.convert(dto, file);
         } catch (err) {
             throw new InternalServerErrorException(err, "convert fail");
@@ -104,7 +105,7 @@ class LibreOfficeConverter extends Converter {
             return await waitForFile(targetFile, 3000);
         } finally {
             this.prepareOffice();
-            // fs.rmSync(tmpDir, { recursive: true, force: true })
+            fs.rmSync(tmpDir, { recursive: true, force: true })
         }
     }
 
