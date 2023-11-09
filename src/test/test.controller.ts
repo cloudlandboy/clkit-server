@@ -7,6 +7,6 @@ export class TestController {
 
     @Get()
     test(): string {
-        return "hello world";
+        return Handlebars.compile(`{{lte str 69}}`)({ str: 96 });
     }
 }

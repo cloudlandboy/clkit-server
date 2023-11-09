@@ -16,6 +16,9 @@ import * as dayjs from 'dayjs'
  * contains: 当前上下文是否包含指定值
  * formatNowNormDatetime: 格式化当前时间为 YYYY-MM-DD HH:mm:ss
  * formatNowNormDatetimeDateSlash: 格式化当前时间为 YYYY/MM/DD HH:mm:ss
+ * equals: 参数1===参数2
+ * lte: 参数1<参数2
+ * gte: 参数1>参数2
  */
 function registerHandlebarsHelper() {
     const stringMethodNames = ['camelCase', 'snakeCase', 'kebabCase', 'upperFirst', 'lowerFirst', 'toLower', 'toUpper'];
@@ -59,6 +62,16 @@ function registerHandlebarsHelper() {
             return Object.keys(context).includes(value);
         }
         return false;
+    })
+    Handlebars.registerHelper('equals', function (v1, v2) {
+        return Lodash.isEqual(v1, v2);
+    })
+    Handlebars.registerHelper('lte', function (v1, v2) {
+        console.log(v1, v2);
+        return Lodash.lte(v1, v2);
+    })
+    Handlebars.registerHelper('gte', function (v1, v2) {
+        return Lodash.gte(v1, v2);
     })
 }
 

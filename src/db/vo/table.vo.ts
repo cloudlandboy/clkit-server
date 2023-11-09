@@ -16,4 +16,8 @@ export class ColumnInfo {
     extra: string;
     isNullable: string;
     columnType: string;
+    maxStringLength: number;
+    maxIntDigit: number;
+    maxFractionDigit: number;
+    isUnsignedNumber: boolean;
 }

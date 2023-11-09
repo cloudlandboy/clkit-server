@@ -123,14 +123,28 @@ class MysqlMetadataMapper implements DbMetadataMapper {
   async queryTableInfo(db: Db, tableNames: string[]): Promise<TableInfo[]> {
     const datastore = await this.initializeDataSource(db);
     const tables = await this.findTable(db.database, tableNames, datastore);
-    const columns = await datastore.query(`SELECT table_name AS tableName, column_name AS columnName,data_type AS dataType,column_comment AS comment,column_key AS columnKey,extra,is_nullable AS isNullable,column_type AS columnType FROM COLUMNS WHERE table_name IN (${tableNames.map(i => '?').join(',')}) AND table_schema = ? order by ordinal_position`,
+    const columns = await datastore.query(`SELECT table_name AS tableName, column_name AS columnName,data_type AS dataType,column_comment AS comment,column_key AS columnKey,extra,is_nullable AS isNullable,column_type AS columnType,character_maximum_length AS maxStringLength,numeric_precision AS maxIntDigit,numeric_scale AS maxFractionDigit FROM COLUMNS WHERE table_name IN (${tableNames.map(i => '?').join(',')}) AND table_schema = ? order by ordinal_position`,
       tableNames.concat([db.database]))
     datastore.destroy();
     return tables.map(table => {
       const tableInfo = new TableInfo();
       tableInfo.name = table.name;
       tableInfo.comment = table.comment;
-      tableInfo.columnInfos = columns.filter(item => item.tableName === table.name).map(item => Object.assign(new ColumnInfo(), item))
+      tableInfo.columnInfos = columns.filter(item => item.tableName === table.name).map(item => {
+        const ci = Object.assign(new ColumnInfo(), item)
+        if (item.maxStringLength) {
+          ci.maxStringLength = Number(item.maxStringLength);
+        }
+        if (item.maxIntDigit) {
+          ci.maxIntDigit = Number(item.maxIntDigit);
+        }
+        if (item.maxFractionDigit) {
+          ci.maxFractionDigit = Number(item.maxFractionDigit);
+        }
+        ci.isUnsignedNumber = item.columnType.includes('unsigned');
+        ci.isNullable = (item.isNullable === 'YES');
+        return ci;
+      })
       return tableInfo;
     });
   }

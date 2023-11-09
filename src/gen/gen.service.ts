@@ -7,7 +7,6 @@ import { ColumnInfo } from 'src/db/vo/table.vo';
 import * as  Lodash from "lodash";
 import { hasText } from "../util/string-utils";
 import { Handlebars } from "../util/template-utils";
-import { createReadStream, createWriteStream, mkdirSync, writeFileSync } from 'fs';
 import { Response } from 'express';
 import * as path from 'path';
 import * as JSZip from "jszip";
@@ -47,6 +46,10 @@ export class GenService {
 
 
         const tableInfos = await this.dbService.queryTableInfo(dto.dataSourceId, dto.tableNames);
+        let fileName = dto.tableNames[0];
+        if (dto.tableNames.length > 1) {
+            fileName = `${db.database}_${tableInfos.length}_table_files`;
+        }
         const files = [];
 
         tableInfos.forEach(tableInfo => {
@@ -58,8 +61,14 @@ export class GenService {
                     name: c.columnName,
                     camelCaseName: Lodash.camelCase(c.columnName),
                     comment: c.comment || c.columnName,
+                    maxStringLength: c.maxStringLength,
+                    maxIntDigit: c.maxIntDigit,
+                    maxFractionDigit: c.maxFractionDigit,
+                    isNullable: c.isNullable,
+                    isUnsignedNumber: c.isUnsignedNumber,
                     langType: ltc.convert(c)
                 }
+
                 if (column.langType.needImport) {
                     columnLangTypePackages.add(column.langType.package);
                 }
@@ -98,9 +107,9 @@ export class GenService {
                     fileNamePattern = `${Lodash.snakeCase(mdu.name)}/${mdu.name}.${templte.language}`
                 }
 
-                const fileName = Handlebars.compile(fileNamePattern)(context);
+                const moduleFileName = Handlebars.compile(fileNamePattern)(context);
                 const result = Handlebars.compile(mdu.template)(context);
-                files.push({ name: fileName, content: result });
+                files.push({ name: path.join(fileName, moduleFileName), content: result });
             }
 
         })
@@ -117,10 +126,7 @@ export class GenService {
         } else {
             res.header('Content-Type', 'application/zip');
 
-            let fileName = dto.tableNames[0];
-            if (dto.tableNames.length > 1) {
-                fileName = `${db.database}_${tableInfos.length}_table_files`;
-            }
+
             res.header('Content-Disposition', 'attachment; filename=' + fileName + '.zip');
             const zip = new JSZip();
             files.forEach(item => zip.file(item.name, item.content));
@@ -187,6 +193,8 @@ export class LanguageType {
     type: string;
     package: string;
     needImport: boolean;
+    isNumber: boolean;
+    isDecimal: boolean;
 }
 
 interface LanguageTypeConverter {
@@ -198,7 +206,9 @@ class JavaTypeConverter implements LanguageTypeConverter {
     private stringType: LanguageType = {
         "type": "String",
         "package": "java.lang.String",
-        "needImport": false
+        "needImport": false,
+        "isNumber": false,
+        "isDecimal": false
     }
 
     private javaToMysqlTypeMapping = {
@@ -273,72 +283,100 @@ class JavaTypeConverter implements LanguageTypeConverter {
         "int": {
             "type": "Integer",
             "package": "java.lang.Integer",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": false
         },
         "bigint": {
             "type": "Long",
             "package": "java.lang.Long",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": false
         },
         "smallint": {
             "type": "Short",
             "package": "java.lang.Short",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": false
         },
         "tinyint": {
             "type": "Byte",
             "package": "java.lang.Byte",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": false
         },
         "float": {
             "type": "Float",
             "package": "java.lang.Float",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": true
         },
         "double": {
             "type": "Double",
             "package": "java.lang.Double",
-            "needImport": false
+            "needImport": false,
+            "isNumber": true,
+            "isDecimal": true
         },
         "decimal": {
             "type": "BigDecimal",
             "package": "java.math.BigDecimal",
-            "needImport": true
+            "needImport": true,
+            "isNumber": true,
+            "isDecimal": true
         },
         "date": {
             "type": "LocalDate",
             "package": "java.time.LocalDate",
-            "needImport": true
+            "needImport": true,
+            "isNumber": false,
+            "isDecimal": false
         },
         "datetime": {
             "type": "LocalDateTime",
             "package": "java.time.LocalDateTime",
-            "needImport": true
+            "needImport": true,
+            "isNumber": false,
+            "isDecimal": false
         },
         "time": {
             "type": "LocalTime",
             "package": "java.time.LocalTime",
-            "needImport": true
+            "needImport": true,
+            "isNumber": false,
+            "isDecimal": false
         },
         "boolean": {
             "type": "Boolean",
             "package": "java.lang.Boolean",
-            "needImport": false
+            "needImport": false,
+            "isNumber": false,
+            "isDecimal": false
         },
         "blob": {
             "type": "byte[]",
             "package": "",
-            "needImport": false
+            "needImport": false,
+            "isNumber": false,
+            "isDecimal": false
         },
         "geometry": {
             "type": "byte[]",
             "package": "",
-            "needImport": false
+            "needImport": false,
+            "isNumber": false,
+            "isDecimal": false
         },
         "uuid": {
             "type": "UUID",
             "package": "java.util.UUID",
-            "needImport": true
+            "needImport": true,
+            "isNumber": false,
+            "isDecimal": false
         },
         "enum": this.stringType,
         "set": this.stringType,
