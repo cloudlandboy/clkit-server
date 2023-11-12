@@ -6,9 +6,12 @@ import { OfficeModule } from './office/office.module';
 import { ConfigModule } from '@nestjs/config';
 import { DbModule } from './db/db.module';
 import { TestController } from './test/test.controller';
+import { TemplateController } from './gen/template.controller';
+import { TemplateService } from './gen/template.service';
 
 @Module({
   imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true }), DbModule],
-  controllers: [TestController],
+  controllers: [TestController, TemplateController],
+  providers: [TemplateService],
 })
 export class AppModule { }

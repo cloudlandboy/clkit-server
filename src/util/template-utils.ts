@@ -67,7 +67,6 @@ function registerHandlebarsHelper() {
         return Lodash.isEqual(v1, v2);
     })
     Handlebars.registerHelper('lte', function (v1, v2) {
-        console.log(v1, v2);
         return Lodash.lte(v1, v2);
     })
     Handlebars.registerHelper('gte', function (v1, v2) {

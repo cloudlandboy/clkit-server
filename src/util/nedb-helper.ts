@@ -14,6 +14,7 @@ export class NedbHelper<E> {
     }
 
     create(dto: any): Promise<E> {
+        delete dto._id;
         return new Promise((res, rej) => {
             this.datastore.insert(dto, (err, entity) => {
                 if (err) {

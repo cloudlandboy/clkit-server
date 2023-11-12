@@ -1,7 +1,5 @@
 import { BadRequestException, Injectable, StreamableFile } from '@nestjs/common';
 import { GenCrudDto } from './dto/gen-crud.dto';
-import { NedbHelper } from 'src/util/nedb-helper';
-import { CrudTemplate } from './entities/crud-template.entity';
 import { DbService } from 'src/db/db.service';
 import { ColumnInfo } from 'src/db/vo/table.vo';
 import * as  Lodash from "lodash";
@@ -10,40 +8,42 @@ import { Handlebars } from "../util/template-utils";
 import { Response } from 'express';
 import * as path from 'path';
 import * as JSZip from "jszip";
+import { TemplateService } from './template.service';
+import { DbLangTypeService } from 'src/db/db-lang-type/db-lang-type.service';
+import { DbLangType, LanguageTypeMatch } from 'src/db/db-lang-type/entities/db-lang-type.entity';
 
 
 @Injectable()
 export class GenService {
 
-    private nedbHelper: NedbHelper<CrudTemplate>;
-    private languageTypeConverter: Record<string, JavaTypeConverter> = {
-        java: new JavaTypeConverter()
-    };
-
-    constructor(private readonly dbService: DbService) {
-        this.nedbHelper = new NedbHelper('gen-crud-template');
+    constructor(private readonly dbService: DbService, private readonly dbLangTypeService: DbLangTypeService,
+        private readonly templateService: TemplateService) {
     }
 
     async genCrud(dto: GenCrudDto, res: Response) {
         if (dto.tableNames.length > 100) {
             throw new BadRequestException('单次生成表数量不能超过100');
         }
-        const ltc = this.languageTypeConverter[dto.language];
-        if (!ltc) {
-            throw new BadRequestException('不支持的语言');
-        }
-        const templte = await this.getTemplateById(dto.templateId);
+
+        const templte = await this.templateService.getTemplateById(dto.templateId);
         if (!templte) {
             throw new BadRequestException('模板不存在');
         }
         if (templte.language !== dto.language) {
             throw new BadRequestException('模板语言非 ' + dto.language);
         }
+
+
         const db = await this.dbService.findById(dto.dataSourceId);
         if (!db) {
             throw new BadRequestException('数据源不存在');
         }
 
+        const dbLangType = await this.dbLangTypeService.findByDbTypeAndLangType(db.dialect, dto.language)
+
+        if (!dbLangType) {
+            throw new BadRequestException(`未找到 ${db.dialect} -> ${dto.language} 类型映射配置`);
+        }
 
         const tableInfos = await this.dbService.queryTableInfo(dto.dataSourceId, dto.tableNames);
         let fileName = dto.tableNames[0];
@@ -66,7 +66,7 @@ export class GenService {
                     maxFractionDigit: c.maxFractionDigit,
                     isNullable: c.isNullable,
                     isUnsignedNumber: c.isUnsignedNumber,
-                    langType: ltc.convert(c)
+                    langType: this.macthLandType(c, dbLangType.matchs)
                 }
 
                 if (column.langType.needImport) {
@@ -134,260 +134,17 @@ export class GenService {
         }
     }
 
-    findTemplate(language: string): Promise<CrudTemplate[]> {
-        return language ? this.getTemplateByLanguage(language) : this.nedbHelper.findAll();
-    }
 
-    async saveTemplate(template: CrudTemplate): Promise<CrudTemplate> {
-        const exs = await this.nedbHelper.findByQuery({ key: template.key });
-        if (exs.length > 0) {
-            throw new BadRequestException('模板名称已存在');
+    macthLandType(columnInfo: ColumnInfo, matchs: LanguageTypeMatch[]): LanguageTypeMatch {
+        for (const langType of matchs) {
+            const reg = new RegExp(langType.match);
+            if (reg.test(columnInfo.dataType)) {
+                return langType;
+            }
         }
-        return this.nedbHelper.create(template);
-    }
 
-    async updateTemplate(id: string, template: CrudTemplate): Promise<CrudTemplate> {
-        const exs = await this.nedbHelper.findByQuery({ key: template.key });
-        if (exs.length > 0 && exs[0]._id !== template._id) {
-            throw new BadRequestException('模板名称已存在');
-        }
-        await this.getTemplateAndCheck(id, true);
-        template._id = id;
-        return this.nedbHelper.update(id, template);
-    }
+        throw new BadRequestException(`${columnInfo.dataType} 匹配不到类型`);
 
-    async removeTemplate(id: string): Promise<boolean> {
-        await this.getTemplateAndCheck(id, true);
-        return this.nedbHelper.remove(id);
-    }
-
-    async unlockTemplate(id: string): Promise<boolean> {
-        const entity = await this.getTemplateAndCheck(id, false);
-        entity.locked = false;
-        await this.nedbHelper.update(id, entity);;
-        return true;
-    }
-
-    getTemplateById(id: string): Promise<CrudTemplate> {
-        return this.nedbHelper.findById(id);
-    }
-
-    getTemplateByLanguage(language: string): Promise<CrudTemplate[]> {
-        return this.nedbHelper.findByQuery({ language });
-    }
-
-    async getTemplateAndCheck(id: string, checkLocked: boolean): Promise<CrudTemplate> {
-        const template = await this.getTemplateById(id);
-        if (!template) {
-            throw new BadRequestException('模板不存在');
-        }
-        if (checkLocked && template.locked) {
-            throw new BadRequestException('已锁模板不允许编辑删除');
-        }
-        return template;
-    }
-
-}
-
-export class LanguageType {
-    type: string;
-    package: string;
-    needImport: boolean;
-    isNumber: boolean;
-    isDecimal: boolean;
-}
-
-interface LanguageTypeConverter {
-    convert(columnInfo: ColumnInfo): LanguageType;
-}
-
-class JavaTypeConverter implements LanguageTypeConverter {
-
-    private stringType: LanguageType = {
-        "type": "String",
-        "package": "java.lang.String",
-        "needImport": false,
-        "isNumber": false,
-        "isDecimal": false
-    }
-
-    private javaToMysqlTypeMapping = {
-        "int": {
-            type: "INT",
-            param: "(11)"
-        },
-        "integer": {
-            type: "INT",
-            param: "(11)"
-        },
-        "long": {
-            type: "BIGINT",
-            param: "(20)"
-        },
-        "short": {
-            type: "SMALLINT",
-            param: "(6)"
-        },
-        "byte": {
-            type: "TINYINT",
-            param: "(4)"
-        },
-        "float": {
-            type: "FLOAT",
-            param: ""
-        },
-        "double": {
-            type: "DOUBLE",
-            param: ""
-        },
-        "bigDecimal": {
-            type: "DECIMAL",
-            param: "(10, 2)"
-        },
-        "localDate": {
-            type: "DATE",
-            param: ""
-        },
-        "date": {
-            type: "DATETIME",
-            param: ""
-        },
-        "localDateTime": {
-            type: "DATETIME",
-            param: ""
-        },
-        "localTime": {
-            type: "TIME",
-            param: ""
-        },
-        "boolean": {
-            type: "TINYINT",
-            param: "(1)"
-        },
-        "string": {
-            type: "VARCHAR",
-            param: "(255)"
-        },
-        "character": {
-            type: "VARCHAR",
-            param: "(255)"
-        },
-        "char": {
-            type: "CHAR",
-            param: ""
-        },
-    }
-
-
-    private typeJson = {
-        "int": {
-            "type": "Integer",
-            "package": "java.lang.Integer",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": false
-        },
-        "bigint": {
-            "type": "Long",
-            "package": "java.lang.Long",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": false
-        },
-        "smallint": {
-            "type": "Short",
-            "package": "java.lang.Short",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": false
-        },
-        "tinyint": {
-            "type": "Byte",
-            "package": "java.lang.Byte",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": false
-        },
-        "float": {
-            "type": "Float",
-            "package": "java.lang.Float",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": true
-        },
-        "double": {
-            "type": "Double",
-            "package": "java.lang.Double",
-            "needImport": false,
-            "isNumber": true,
-            "isDecimal": true
-        },
-        "decimal": {
-            "type": "BigDecimal",
-            "package": "java.math.BigDecimal",
-            "needImport": true,
-            "isNumber": true,
-            "isDecimal": true
-        },
-        "date": {
-            "type": "LocalDate",
-            "package": "java.time.LocalDate",
-            "needImport": true,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "datetime": {
-            "type": "LocalDateTime",
-            "package": "java.time.LocalDateTime",
-            "needImport": true,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "time": {
-            "type": "LocalTime",
-            "package": "java.time.LocalTime",
-            "needImport": true,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "boolean": {
-            "type": "Boolean",
-            "package": "java.lang.Boolean",
-            "needImport": false,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "blob": {
-            "type": "byte[]",
-            "package": "",
-            "needImport": false,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "geometry": {
-            "type": "byte[]",
-            "package": "",
-            "needImport": false,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "uuid": {
-            "type": "UUID",
-            "package": "java.util.UUID",
-            "needImport": true,
-            "isNumber": false,
-            "isDecimal": false
-        },
-        "enum": this.stringType,
-        "set": this.stringType,
-        "char": this.stringType,
-        "varchar": this.stringType,
-        "text": this.stringType,
-        "json": this.stringType
-    }
-
-    convert(columnInfo: ColumnInfo): LanguageType {
-        return this.typeJson[columnInfo.dataType] || this.stringType;
     }
 
 }
