@@ -73,6 +73,9 @@ class LibreOfficeConverter extends Converter {
 
     constructor(private officeBinPath: string, private tempDir: string, private platformProcess: PlatformProcess) {
         super();
+        if (!officeBinPath) {
+            return
+        }
         this.officeBinPath = pathJoin(officeBinPath, 'program', this.binName);
         fs.access(this.officeBinPath, fs.constants.F_OK, (err) => {
             if (err) {
