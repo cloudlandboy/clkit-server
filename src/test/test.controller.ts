@@ -5,6 +5,6 @@ export class TestController {
 
     @Get()
     test(): string {
-        return '222222';
+        return '88888';
     }
 }
