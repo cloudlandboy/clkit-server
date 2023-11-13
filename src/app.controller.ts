@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller('app')
@@ -11,5 +11,15 @@ export class AppController {
     @Get('version')
     getCurrentVersion(): string {
         return this.appService.getCurrentVersion();
+    }
+
+    @Get('check_update')
+    checkUpdate() {
+        return this.appService.checkUpdate();
+    }
+
+    @Post('update')
+    update() {
+        return this.appService.update();
     }
 }

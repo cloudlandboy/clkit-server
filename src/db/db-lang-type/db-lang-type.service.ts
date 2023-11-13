@@ -40,11 +40,7 @@ export class DbLangTypeService {
   }
 
   async findByDbTypeAndLangType(dbType: string, langType: string): Promise<DbLangType> {
-    console.log(dbType);
-    console.log(langType);
     const res = await this.nedbHelper.findByQuery({ dbType, langType });
-    console.log(res);
-    
     return res[0];
   }
 }
