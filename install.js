@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const path_1 = require("path");
 const child_process_1 = require("child_process");
 const fs_1 = require("fs");
+const os_1 = require("os");
 const projectRootPath = __dirname;
 const distPath = (0, path_1.join)(projectRootPath, 'dist');
 const distPjFilePath = (0, path_1.join)(distPath, 'package.json');
@@ -35,3 +36,4 @@ if (needInstall) {
 if (needBuild) {
     (0, child_process_1.execSync)('npm run build', { stdio: 'inherit', cwd: projectRootPath });
 }
+(0, fs_1.cpSync)((0, path_1.join)(projectRootPath, 'init_data', 'db'), (0, path_1.join)((0, os_1.homedir)(), '.clboy-kit'), { force: false, recursive: true });

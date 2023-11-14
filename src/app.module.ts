@@ -10,9 +10,10 @@ import { TemplateController } from './gen/template.controller';
 import { GithubModule } from './github/github.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ReplaceEachRowModule } from './replace-each-row/replace-each-row.module';
 
 @Module({
-  imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true }), DbModule, GithubModule],
+  imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true }), DbModule, GithubModule, ReplaceEachRowModule],
   controllers: [TestController, AppController],
   providers: [AppService],
 })

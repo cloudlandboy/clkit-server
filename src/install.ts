@@ -1,6 +1,7 @@
 import { join } from "path";
 import { execSync } from "child_process";
-import { existsSync, readFileSync } from "fs";
+import { cpSync, existsSync, readFileSync } from "fs";
+import { homedir } from "os";
 
 const projectRootPath = join(__dirname, '..');
 const distPath = join(projectRootPath, 'dist');
@@ -40,4 +41,5 @@ if (needBuild) {
     execSync('npm run build', { stdio: 'inherit', cwd: projectRootPath });
 }
 
+cpSync(join(projectRootPath, 'init_data', 'db',), join(homedir(), '.clboy-kit'), { force: false, recursive: true })
 
