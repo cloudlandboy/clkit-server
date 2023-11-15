@@ -1,5 +1,6 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
+import { UpdateAppDto } from './common/dto/update-app.dto';
 
 @Controller('app')
 export class AppController {
@@ -19,7 +20,7 @@ export class AppController {
     }
 
     @Post('update')
-    update() {
-        return this.appService.update();
+    update(@Body() dto: UpdateAppDto) {
+        return this.appService.update(dto);
     }
 }

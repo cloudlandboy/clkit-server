@@ -1,39 +1,92 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const path_1 = require("path");
-const child_process_1 = require("child_process");
-const fs_1 = require("fs");
-const os_1 = require("os");
+const path = require('path');
+const process = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const config = require('./src/config.json');
+const tsconfig = require('./tsconfig.json');
+const packageJson = require('./package.json');
+
 const projectRootPath = __dirname;
-const distPath = (0, path_1.join)(projectRootPath, 'dist');
-const distPjFilePath = (0, path_1.join)(distPath, 'package.json');
+const distPath = path.join(projectRootPath, tsconfig.compilerOptions.outDir);
+const distPjFilePath = path.join(distPath, 'package.json');
+const sourcesPath = path.join(projectRootPath, config.sourceDir);
+const uiSoucePath = path.join(projectRootPath, config.uiSourceDir);
+const uiDistPath = path.join(uiSoucePath, 'dist');
+const webUiDirPath = path.join(projectRootPath, config.uiDir);
+
+console.log('===============> UI项目地址: ', config.uiRepos);
+console.log('===============> 服务端项目地址：', config.serverRepos);
+console.log('===============> 编译路径：', distPath);
+console.log('===============> UI源码路径: ', uiSoucePath);
+
+if (!fs.existsSync(sourcesPath)) {
+    fs.mkdirSync(sourcesPath, { recursive: true });
+}
+
+if (!commandAvailable('pm2 --version')) {
+    console.log('准备安装pm2');
+    process.execSync('npm install -g pm2', { encoding: 'utf8', stdio: 'inherit' });
+    console.log('pm2安装成功!');
+}
+
+let needInstall = true;
+let needBuild = true;
+let needcloneUi = !fs.existsSync(uiSoucePath);
+
+if (fs.existsSync(distPjFilePath)) {
+    const dist = JSON.parse(fs.readFileSync(distPjFilePath, 'utf8'));
+    const distInstalled = Object.keys(dist.dependencies);
+    needInstall = Object.keys(packageJson.dependencies).some(pk => !distInstalled.includes(pk))
+    needBuild = packageJson.version !== dist.version;
+}
+
+if (needInstall) {
+    process.execSync('npm install', { stdio: 'inherit', cwd: projectRootPath });
+}
+
+const pm2AppPath = path.join(projectRootPath, config.pm2AppDir);
+
+if (needBuild || !fs.existsSync(pm2AppPath)) {
+    process.execSync('npm run build', { stdio: 'inherit', cwd: projectRootPath });
+    fs.cpSync(distPath, pm2AppPath, { force: true, recursive: true })
+    const pm2Config = `module.exports=${JSON.stringify(config.ecosystemConfig)}`
+    fs.writeFileSync(path.join(pm2AppPath, 'ecosystem.config.js'), pm2Config, { encoding: 'utf8' });
+}
+
+
+
+if (needcloneUi) {
+    cloneUi();
+    process.execSync(`npm i && npm run build`, { stdio: 'inherit', cwd: uiSoucePath });
+    fs.cpSync(uiDistPath, webUiDirPath, { force: true, recursive: true })
+}
+
+if (!fs.existsSync(webUiDirPath)) {
+    process.execSync(`git pull`, { stdio: 'inherit', cwd: uiSoucePath });
+    process.execSync(`npm i && npm run build`, { stdio: 'inherit', cwd: uiSoucePath });
+    fs.cpSync(uiDistPath, webUiDirPath, { force: true, recursive: true })
+}
+
+
+fs.cpSync(path.join(projectRootPath, 'init_data', 'db',), path.join(os.homedir(), config.userHomeConfigDir), { force: false, recursive: true })
+
 function commandAvailable(testCommand) {
     try {
-        (0, child_process_1.execSync)(testCommand, { stdio: 'ignore' });
+        process.execSync(testCommand, { stdio: 'ignore' });
         return true;
-    }
-    catch (error) {
+    } catch (error) {
         return false;
     }
 }
-if (!commandAvailable('pm2 --version')) {
-    console.log('准备安装pm2');
-    (0, child_process_1.execSync)('npm install -g pm2', { encoding: 'utf8', stdio: 'inherit' });
-    console.log('pm2安装成功!');
+
+function cloneUi() {
+    for (const repo of config.uiRepos) {
+        try {
+            process.execSync(`git clone ${repo}`, { stdio: 'inherit', cwd: sourcesPath });
+            return;
+        } catch (err) {
+            console.error(`git clone ${repo} fail: ${err.message}`);
+        }
+    }
+    throw new Error('clone ui repo error');
 }
-let needInstall = true;
-let needBuild = true;
-if ((0, fs_1.existsSync)(distPjFilePath)) {
-    const dist = JSON.parse((0, fs_1.readFileSync)(distPjFilePath, 'utf8'));
-    const distInstalled = Object.keys(dist.dependencies);
-    const current = JSON.parse((0, fs_1.readFileSync)((0, path_1.join)(projectRootPath, 'package.json'), 'utf8'));
-    needInstall = Object.keys(current.dependencies).some(pk => !distInstalled.includes(pk));
-    needBuild = current.version !== dist.version;
-}
-if (needInstall) {
-    (0, child_process_1.execSync)('npm install', { stdio: 'inherit', cwd: projectRootPath });
-}
-if (needBuild) {
-    (0, child_process_1.execSync)('npm run build', { stdio: 'inherit', cwd: projectRootPath });
-}
-(0, fs_1.cpSync)((0, path_1.join)(projectRootPath, 'init_data', 'db'), (0, path_1.join)((0, os_1.homedir)(), '.clboy-kit'), { force: false, recursive: true });
