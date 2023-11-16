@@ -1,6 +1,7 @@
 {
     "appName": "clboy-kit-server",
     "uiDir": "./ui",
+    "integrationInstallDir": "./ui/integration",
     "sourceDir": "./sources",
     "uiSourceDir": "./sources/clboy-kit",
     "userHomeConfigDir": ".clboy-kit",

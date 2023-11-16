@@ -39,3 +39,4 @@ lerna-debug.log*
 .env
 ui
 sources
+package-lock.json

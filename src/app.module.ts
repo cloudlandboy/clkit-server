@@ -13,12 +13,13 @@ import { ReplaceEachRowModule } from './replace-each-row/replace-each-row.module
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { uiDir } from "./config.json";
+import { IntegrationModule } from './integration/integration.module';
 
 @Module({
   imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true }),
     DbModule, GithubModule, ReplaceEachRowModule, ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', uiDir),
-    }),],
+    }), IntegrationModule,],
   controllers: [TestController, AppController],
   providers: [AppService],
 })

@@ -1,7 +1,8 @@
 import * as Nedb from "nedb";
 import { serverHomeFile } from "./file-utils";
+import { BaseEntity } from "src/common/entities/base-entity";
 
-export class NedbHelper<E> {
+export class NedbHelper<E extends BaseEntity> {
 
     private datastore: Nedb.Datastore;
 
@@ -13,7 +14,7 @@ export class NedbHelper<E> {
         })
     }
 
-    create(dto: any): Promise<E> {
+    create(dto: E): Promise<E> {
         delete dto._id;
         return new Promise((res, rej) => {
             this.datastore.insert(dto, (err, entity) => {
@@ -47,9 +48,21 @@ export class NedbHelper<E> {
         })
     }
 
-    update(id: string, dto: any): Promise<E> {
+    update(id: string, dto: E): Promise<E> {
         return new Promise((res, rej) => {
             this.datastore.update({ _id: id }, dto, { returnUpdatedDocs: true }, (err, numAffected, affectedDocuments) => {
+                if (err) {
+                    rej(err);
+                } else {
+                    res(affectedDocuments);
+                }
+            });
+        })
+    }
+
+    updateByModifiers(update: Partial<Record<keyof E, any>>, modifiers: any): Promise<E> {
+        return new Promise((res, rej) => {
+            this.datastore.update(update, modifiers, { multi: true, returnUpdatedDocs: true }, (err, numAffected, affectedDocuments) => {
                 if (err) {
                     rej(err);
                 } else {
