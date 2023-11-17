@@ -44,14 +44,14 @@ export class AppService {
     update(dto: UpdateAppDto) {
         if (dto.updateUi) {
             const uiSourcePath = getRelativeAppRootPath(getConfig().uiSourceDir);
-            execSync(`git pull`, { stdio: 'inherit', cwd: uiSourcePath });
-            execSync(`npm i && npm run build`, { stdio: 'inherit', cwd: uiSourcePath });
+            execSync(`git pull`, { stdio: 'inherit', cwd: uiSourcePath, windowsHide: true });
+            execSync(`npm i && npm run build`, { stdio: 'inherit', cwd: uiSourcePath, windowsHide: true });
             cpSync(join(uiSourcePath, 'dist'), getRelativeAppRootPath(getConfig().uiDir), { force: true, recursive: true })
         }
         if (dto.updateServer) {
-            execSync('git pull', { cwd: getAppRootPath(), encoding: 'utf8' });
-            execSync(`node install.js`, { cwd: getAppRootPath(), encoding: 'utf8' });
-            execSync(`pm2 reload ${getConfig().appName}`, { cwd: getAppRootPath(), encoding: 'utf8' });
+            execSync('git pull', { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
+            execSync(`node install.js`, { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
+            execSync(`pm2 reload ${getConfig().appName}`, { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
         }
     }
 

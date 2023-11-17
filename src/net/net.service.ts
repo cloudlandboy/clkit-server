@@ -33,7 +33,7 @@ export class NetService {
             }
 
             tasks.push(new Promise((res, rej) => {
-                exec(`${this.pingCommand} ${ip}`, async (err, stdout, stderr) => {
+                exec(`${this.pingCommand} ${ip}`, { windowsHide: true }, async (err, stdout, stderr) => {
                     if (!err) {
                         vos.push(new ScanLanIpVo(ip));
                     }

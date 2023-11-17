@@ -39,7 +39,7 @@ class Win32PlatformProcess implements PlatformProcess {
 
     killPid(pid: number): boolean {
         try {
-            execSync(`taskkill /f /pid ${pid}`);
+            execSync(`taskkill /f /pid ${pid}`, { windowsHide: true });
             return true;
         } catch (err) {
             return false;
@@ -83,7 +83,7 @@ class Win32PlatformProcess implements PlatformProcess {
     }
 
     private execSyncConvertResult(command: string): string {
-        const result = execSync(command, { encoding: 'buffer' });
+        const result = execSync(command, { encoding: 'buffer', windowsHide: true });
         return decode(result, 'cp936');
     }
 
