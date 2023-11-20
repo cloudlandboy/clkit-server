@@ -39,6 +39,13 @@ export class DbLangTypeService {
     return this.nedbHelper.remove(id);
   }
 
+  async unlock(id: string): Promise<boolean> {
+    const entity = await this.findById(id);
+    entity.locked = false;
+    await this.nedbHelper.update(id, entity);;
+    return true;
+  }
+
   async findByDbTypeAndLangType(dbType: string, langType: string): Promise<DbLangType> {
     const res = await this.nedbHelper.findByQuery({ dbType, langType });
     return res[0];

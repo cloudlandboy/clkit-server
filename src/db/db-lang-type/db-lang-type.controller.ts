@@ -30,4 +30,9 @@ export class DbLangTypeController {
   remove(@Param('id') id: string) {
     return this.dbLangTypeService.remove(id);
   }
+
+  @Post('unlock/:id')
+  unlock(@Param('id') id: string) {
+    return this.dbLangTypeService.unlock(id);
+  }
 }

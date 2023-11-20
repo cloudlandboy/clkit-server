@@ -3,6 +3,7 @@ import { BaseEntity } from "src/common/entities/base-entity";
 export class DbLangType extends BaseEntity {
     dbType: string;
     langType: string;
+    locked: boolean;
     matchs: LanguageTypeMatch[];
 }
 
