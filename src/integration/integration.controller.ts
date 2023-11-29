@@ -35,4 +35,9 @@ export class IntegrationController {
   remove(@Param('id') id: string) {
     return this.integrationService.remove(id);
   }
+
+  @Post('/install/:id')
+  install(@Param('id') id: string) {
+    return this.integrationService.install(id);
+  }
 }
