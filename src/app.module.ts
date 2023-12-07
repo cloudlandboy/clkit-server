@@ -14,12 +14,13 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { uiDir } from "./config.json";
 import { IntegrationModule } from './integration/integration.module';
+import { SystemModule } from './system/system.module';
 
 @Module({
-  imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true}),
+  imports: [NetModule, WebModule, GenModule, OfficeModule, ConfigModule.forRoot({ isGlobal: true }),
     DbModule, GithubModule, ReplaceEachRowModule, ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', uiDir)
-    }), IntegrationModule,],
+    }), IntegrationModule, SystemModule],
   controllers: [TestController, AppController],
   providers: [AppService],
 })

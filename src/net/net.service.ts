@@ -81,23 +81,23 @@ export class NetService {
         return ips;
     }
 
-    findPid(type: string, value: string | number): PidInfo[] {
+    async findPid(type: string, value: string | number): Promise<PidInfo[]> {
         if (type === 'port') {
-            return this.platformProcess.findPidByPort(Number(value));
+            return await this.platformProcess.findPidByPort(Number(value));
         } else if (type === 'pid') {
-            const pi = this.platformProcess.findPidInfo(Number(value));
+            const pi = await this.platformProcess.findPidInfo(Number(value));
             return pi ? [pi] : [];
         } else {
-            return this.platformProcess.findPidByName(value + '');
+            return await this.platformProcess.findPidByName(value + '');
         }
     }
 
-    killPid(pid: number): boolean {
+    killPid(pid: number): Promise<boolean> {
         return this.platformProcess.killPid(pid);
     }
 
-    killPort(port: number): boolean {
-        let pidInfo = this.platformProcess.findPidByPort(port)
+    async killPort(port: number): Promise<boolean> {
+        const pidInfo = await this.platformProcess.findPidByPort(port)
         return pidInfo.filter(p => this.platformProcess.killPid(p.pid)).some(r => r);
     }
 

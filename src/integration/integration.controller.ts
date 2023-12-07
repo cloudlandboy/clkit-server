@@ -1,3 +1,9 @@
+/**
+ * $1
+ * @author: clboy
+ * @date: 2023-12-05 20:51:19
+ * @Copyright (c) 2023 by syl@clboy.cn, All Rights Reserved. 
+ */
 import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
 import { IntegrationService } from './integration.service';
 import { Integration } from './entities/integration.entity';
@@ -14,6 +20,16 @@ export class IntegrationController {
   @Get()
   findAll() {
     return this.integrationService.findAll();
+  }
+
+  @Get('tree')
+  getTree() {
+    return this.integrationService.getTree(false);
+  }
+
+  @Get('installed_tree')
+  getInstalledTree() {
+    return this.integrationService.getTree(true);
   }
 
   @Get('installed')

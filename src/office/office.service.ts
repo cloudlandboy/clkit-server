@@ -113,14 +113,15 @@ class LibreOfficeConverter extends Converter {
     }
 
     private prepareOffice() {
-        const pid = this.platformProcess.findPidByName(this.binName);
-        if (pid.length === 0) {
-            exec(`${this.officeBinPath} --headless --invisible`, (err) => {
-                if (err) {
-                    console.error(`exec ${this.officeBinPath} fail`);
-                }
-            });
-        }
+        this.platformProcess.findPidByName(this.binName).then(pid => {
+            if (pid.length === 0) {
+                exec(`${this.officeBinPath} --headless --invisible`, (err) => {
+                    if (err) {
+                        console.error(`exec ${this.officeBinPath} fail`);
+                    }
+                });
+            }
+        });
     }
 
 }

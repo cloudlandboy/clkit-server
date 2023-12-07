@@ -20,17 +20,17 @@ export class NetController {
   }
 
   @Get('find_pid')
-  findPid(@Query('type') type: string, @Query('value') value: number | string): PidInfo[] {
+  findPid(@Query('type') type: string, @Query('value') value: number | string): Promise<PidInfo[]> {
     return this.netService.findPid(type, value);
   }
 
   @Post('kill_pid')
-  killPid(@Body('pid') pid: number): boolean {
+  killPid(@Body('pid') pid: number): Promise<boolean> {
     return this.netService.killPid(pid);
   }
 
   @Post('kill_port')
-  killPort(@Body('port') port: number): boolean {
+  killPort(@Body('port') port: number): Promise<boolean> {
     return this.netService.killPort(port);
   }
 }

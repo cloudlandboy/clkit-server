@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotImplementedException, OnModuleInit } from '@nestjs/common';
-import { Integration, IntegrationType } from './entities/integration.entity';
+import { Integration } from './entities/integration.entity';
 import { NedbHelper } from 'src/util/nedb-helper';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, createWriteStream } from 'fs';
 import { basename, join } from 'path';
@@ -8,6 +8,8 @@ import { hasText } from "../util/string-utils";
 import { AxiosResponse } from 'axios';
 import { MB_AXIOS_INSTANCE } from "../util/mock-browser-axios";
 import { zip, gzip, tar, tgz } from "compressing";
+import { IntegrationTreeNode } from './vo/integration-tree.vo';
+import { INTEGRATION_TYPES, INTEGRATION_TYPE_DICT } from 'src/common/constants/dict.constants';
 
 @Injectable()
 export class IntegrationService implements OnModuleInit {
@@ -19,8 +21,8 @@ export class IntegrationService implements OnModuleInit {
   constructor() {
     this.nedbHelper = new NedbHelper('integration');
     this.installerMap = {};
-    this.installerMap[IntegrationType.DOWNLOAD_URL] = new DownloadUrlIntegrationInstaller();
-    this.installerMap[IntegrationType.DISK_PATH] = new DiskPathIntegrationInstaller();
+    this.installerMap[INTEGRATION_TYPES.DOWNLOAD_URL.value] = new DownloadUrlIntegrationInstaller();
+    this.installerMap[INTEGRATION_TYPES.DISK_PATH.value] = new DiskPathIntegrationInstaller();
   }
 
   async create(dto: Integration): Promise<Integration> {
@@ -28,13 +30,22 @@ export class IntegrationService implements OnModuleInit {
     if (exs) {
       throw new BadRequestException(`${dto.name} 名称已存在`);
     }
-    this.entityPretreatment(dto);
-    dto.installed = (dto.type === IntegrationType.ONLINE_URL);
+    await this.entityPretreatment(dto, INTEGRATION_TYPES.FOLDER.ve(dto.type) || INTEGRATION_TYPES.ONLINE_URL.ve(dto.type));
     return this.nedbHelper.create(dto);
   }
 
   async findAll(): Promise<Integration[]> {
     return this.nedbHelper.findAll();
+  }
+
+  async getTree(filterInstalled: boolean): Promise<IntegrationTreeNode[]> {
+    let items: Integration[];
+    if (filterInstalled) {
+      items = await this.findAllInstalled();
+    } else {
+      items = await this.findAll();
+    }
+    return IntegrationTreeNode.buildTree(items);
   }
 
   async findAllInstalled(): Promise<Integration[]> {
@@ -47,6 +58,7 @@ export class IntegrationService implements OnModuleInit {
     return this.nedbHelper.findById(id);
   }
 
+
   async update(id: string, dto: Integration): Promise<Integration> {
     const exs = await this.findByName(dto.name);
     if (exs && exs._id !== id) {
@@ -56,8 +68,7 @@ export class IntegrationService implements OnModuleInit {
     if (!entity) {
       throw new BadRequestException('集成不存在');
     }
-    this.entityPretreatment(dto);
-    dto.installed = entity.installed;
+    await this.entityPretreatment(dto, entity.installed || INTEGRATION_TYPES.FOLDER.ve(dto.type) || INTEGRATION_TYPES.ONLINE_URL.ve(dto.type));
     return this.nedbHelper.update(id, dto);
   }
 
@@ -94,16 +105,37 @@ export class IntegrationService implements OnModuleInit {
     rmSync(this.getInstalledDir(id), { recursive: true, force: true });
   }
 
-  private entityPretreatment(entity: Integration) {
-    if (entity.type === IntegrationType.ONLINE_URL) {
+  private async entityPretreatment(entity: Integration, installed: boolean) {
+    if (INTEGRATION_TYPES.ONLINE_URL.ve(entity.type)) {
       entity.index = '';
+      entity.insertScript = '';
+    } else if (INTEGRATION_TYPES.FOLDER.ve(entity.type)) {
+      entity.index = '';
+      entity.url = '';
       entity.insertScript = '';
     } else if (!hasText(entity.index)) {
       entity.index = 'index.html';
     }
+
+    entity.installed = installed;
+
     if (isNaN(entity.sortValue)) {
       entity.sortValue = 0;
     }
+
+    let folderIdPath = entity.folderId || '0';
+    if (folderIdPath !== '0') {
+      const folder = await this.findById(entity.folderId);
+      if (!folder || !INTEGRATION_TYPES.FOLDER.ve(folder.type)) {
+        throw new BadRequestException('上级文件夹不存在');
+      }
+      folderIdPath = folder.folderId + '>' + folder._id;
+    }
+
+    if (entity._id && folderIdPath.includes(entity._id)) {
+      throw new BadRequestException('上级文件夹选择不正确');
+    }
+    return folderIdPath;
   }
 
   onModuleInit() {
@@ -115,7 +147,8 @@ export class IntegrationService implements OnModuleInit {
       mkdirSync(this.installPath, { recursive: true });
     }
     this.findAllInstalled().then(installedList => {
-      const ids = installedList.filter(i => i.type !== IntegrationType.ONLINE_URL && !actualInstalledIds.includes(i._id)).map(i => i._id);
+      const ids = installedList.filter(i => INTEGRATION_TYPE_DICT.findByValue(i.type).needInstall && !actualInstalledIds.includes(i._id))
+        .map(i => i._id);
       if (ids.length > 0) {
         this.nedbHelper.updateByModifiers({ _id: { $in: ids } }, { $set: { installed: false } });
       }
@@ -128,7 +161,6 @@ interface IntegrationInstaller {
   install(integration: Integration, installDir: string): Promise<void>;
 
 }
-
 
 class DownloadUrlIntegrationInstaller implements IntegrationInstaller {
 

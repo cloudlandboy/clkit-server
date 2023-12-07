@@ -1,16 +1,16 @@
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import { platform } from "os";
 import { decode } from 'iconv-lite';
+import * as sudo from "sudo-prompt";
+import { hasText } from "./string-utils";
+
 
 export interface PlatformProcess {
 
-    killPid(pid: number): boolean;
-    findPidByPort(port: number): PidInfo[];
-    findPidByName(str: string): PidInfo[];
-    findPidInfo(pid: number): PidInfo;
-}
-
-interface Net {
+    killPid(pid: number): Promise<boolean>;
+    findPidByPort(port: number): Promise<PidInfo[]>;
+    findPidByName(str: string): Promise<PidInfo[]>;
+    findPidInfo(pid: number): Promise<PidInfo>;
 
 }
 
@@ -28,7 +28,7 @@ export class PidInfo {
 
 class Win32PlatformProcess implements PlatformProcess {
 
-    findPidInfo(pid: number): PidInfo {
+    async findPidInfo(pid: number): Promise<PidInfo> {
         try {
             const result = this.execSyncConvertResult(`tasklist /NH /FO CSV /FI "PID eq ${pid}"`);
             return this.convertPidInfo(result.split('\r\n')[0]);
@@ -37,7 +37,7 @@ class Win32PlatformProcess implements PlatformProcess {
         }
     }
 
-    killPid(pid: number): boolean {
+    async killPid(pid: number): Promise<boolean> {
         try {
             execSync(`taskkill /f /pid ${pid}`, { windowsHide: true });
             return true;
@@ -46,7 +46,7 @@ class Win32PlatformProcess implements PlatformProcess {
         }
     }
 
-    findPidByPort(port: number): PidInfo[] {
+    async findPidByPort(port: number): Promise<PidInfo[]> {
         try {
             const result = this.execSyncConvertResult(`netstat -ano | findstr ":${port}"`);
             const pidMap: any = {};
@@ -73,7 +73,7 @@ class Win32PlatformProcess implements PlatformProcess {
         }
     }
 
-    findPidByName(str: string): PidInfo[] {
+    async findPidByName(str: string): Promise<PidInfo[]> {
         try {
             const result = this.execSyncConvertResult(`tasklist /NH /FO CSV | findstr ${str}`);
             return result.split('\r\n').filter(line => line.trim().length > 0).map(line => this.convertPidInfo(line));
@@ -98,18 +98,79 @@ class Win32PlatformProcess implements PlatformProcess {
 }
 
 class UnixPlatformProcess implements PlatformProcess {
-    findPidInfo(pid: number): PidInfo {
-        throw new Error("Method not implemented.");
+    async findPidInfo(pid: number): Promise<PidInfo> {
+        const result = execSync(`ps -h -o pid,rss,comm -p ${pid}`, { encoding: 'utf8' });
+        if (hasText(result)) {
+            return this.convertPidInfo(result);
+        }
+        return null
     }
 
-    killPid(pid: number): boolean {
-        throw new Error("Method not implemented.");
+    killPid(pid: number): Promise<boolean> {
+        return this.sudoExec(`kill -9 ${pid}`, res => res(true), rej => rej(false))
     }
-    findPidByPort(port: number): PidInfo[] {
-        throw new Error("Method not implemented.");
+
+    findPidByPort(port: number): Promise<PidInfo[]> {
+        return this.sudoExec(`lsof -i:${port}`, (res, out) => {
+            const line = out.toString('utf8').trim().split('\n').find(line => line.indexOf('(LISTEN)') > 0);
+            if (!hasText(line)) {
+                res([]);
+                return
+            }
+            this.findPidInfo(Number(line.match(/\s{4}(\d+)\s+/)[1])).then(pi => {
+                res(pi ? [pi] : []);
+            })
+        })
     }
-    findPidByName(str: string): PidInfo[] {
-        throw new Error("Method not implemented.");
+
+    async findPidByName(str: string): Promise<PidInfo[]> {
+        try {
+            const result = execSync(`ps -a -x -h -o pid,rss,comm | grep -i "${str}"`, { encoding: 'utf8' })
+            return result.trim().split('\n').map(line => this.convertPidInfo(line));
+        } catch (err) {
+            return [];
+        }
+    }
+
+    private sudoExec(command: string, resHandler?: (res: Function, stdout: string | Buffer) => void,
+        rejHandler?: (rej: Function, error: Error, stderr: string | Buffer) => void): Promise<any> {
+        let timeout = true;
+        return new Promise((res, rej) => {
+            sudo.exec(command, {
+                name: 'clboyKit'
+            }, (err, stdout, stderr) => {
+                timeout = false;
+                if (err) {
+                    if (rejHandler) {
+                        rejHandler(rej, err, stderr);
+                    } else {
+                        rej(err.message);
+                    }
+                    return;
+                }
+
+                if (resHandler) {
+                    resHandler(res, stdout);
+                } else {
+                    res(stdout);
+                }
+            })
+
+            setTimeout(() => {
+                if (timeout) {
+                    rej('等待输入sudo密码超时');
+                }
+            }, 30000)
+        })
+    }
+
+    private convertPidInfo(line: string): PidInfo {
+        const parts = line.trim().split(/\s+/);
+        const pidInfo = new PidInfo();
+        pidInfo.pid = Number(parts.shift());
+        pidInfo.memUsage = Number(parts.shift())
+        pidInfo.imageName = parts.join('');
+        return pidInfo;
     }
 
 }
