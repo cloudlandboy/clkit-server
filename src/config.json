@@ -1,23 +1,23 @@
 {
-    "appName": "clboy-kit-server",
+    "appName": "clkit-server",
     "uiDir": "./ui",
     "integrationInstallDir": "./ui/integration",
     "sourceDir": "./sources",
-    "uiSourceDir": "./sources/clboy-kit",
-    "userHomeConfigDir": ".clboy-kit",
+    "uiSourceDir": "./sources/clkit",
+    "userHomeConfigDir": ".clkit",
     "pm2AppDir": "./dist_app",
     "uiRepos": [
-        "https://gitee.com/cloudlandboy/clboy-kit.git",
-        "https://github.com/cloudlandboy/clboy-kit.git"
+        "https://gitee.com/cloudlandboy/clkit.git",
+        "https://github.com/cloudlandboy/clkit.git"
     ],
     "serverRepos": [
-        "https://gitee.com/cloudlandboy/clboy-kit-server.git",
-        "https://github.com/cloudlandboy/clboy-kit-server.git"
+        "https://gitee.com/cloudlandboy/clkit-server.git",
+        "https://github.com/cloudlandboy/clkit-server.git"
     ],
     "ecosystemConfig": {
         "apps": [
             {
-                "name": "clboy-kit-server",
+                "name": "clkit-server",
                 "cwd": "./",
                 "script": "main.js",
                 "args": ""

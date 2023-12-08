@@ -1,1 +1,1 @@
-pm2 stop clboy-kit-server
+pm2 stop clkit-server

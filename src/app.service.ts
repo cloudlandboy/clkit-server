@@ -26,8 +26,8 @@ export class AppService {
         try {
             const currentVersion = this.getCurrentVersion();
             const uiCurrentVersion = this.getUiCurrentVersion();
-            let latestVersion: string = await this.githubService.getClboyKitServerVersion();
-            let uiLatestVersion: string = await this.githubService.getClboyKitVersion();
+            let latestVersion: string = await this.githubService.getClkitServerVersion();
+            let uiLatestVersion: string = await this.githubService.getClkitVersion();
             return {
                 latestVersion,
                 currentVersion,

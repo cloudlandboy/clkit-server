@@ -6,7 +6,7 @@ export class GithubController {
   constructor(private readonly githubService: GithubService) { }
 
   @Get('clboy_kit_server_version')
-  getClboyKitServerVersion(): Promise<string> {
-    return this.githubService.getClboyKitServerVersion();
+  getClkitServerVersion(): Promise<string> {
+    return this.githubService.getClkitServerVersion();
   }
 }

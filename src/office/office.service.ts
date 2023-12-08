@@ -97,7 +97,7 @@ class LibreOfficeConverter extends Converter {
             throw new NotAcceptableException(`Conversion from ${ext} to ${dto.toType} is not supported`)
         }
         const uid = uuidv4();
-        const tmpDir = pathJoin(this.tempDir, `clboy-kit-${uid}`);
+        const tmpDir = pathJoin(this.tempDir, `clkit-${uid}`);
         const tmpFile = pathJoin(tmpDir, file.originalname);
         const targetFile = pathJoin(tmpDir, `${basename(file.originalname, '.' + ext)}.${dto.toType}`);
         fs.mkdirSync(tmpDir);

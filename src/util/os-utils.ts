@@ -137,7 +137,7 @@ class UnixPlatformProcess implements PlatformProcess {
         let timeout = true;
         return new Promise((res, rej) => {
             sudo.exec(command, {
-                name: 'clboyKit'
+                name: 'clkit'
             }, (err, stdout, stderr) => {
                 timeout = false;
                 if (err) {

@@ -57,5 +57,5 @@ export const fileType = {
 }
 
 export function serverHomeFile(...paths: string[]) {
-    return join(homedir(), '.clboy-kit', ...paths);
+    return join(homedir(), '.clkit', ...paths);
 }
