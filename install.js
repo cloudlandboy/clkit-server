@@ -23,12 +23,6 @@ if (!fs.existsSync(sourcesPath)) {
     fs.mkdirSync(sourcesPath, { recursive: true });
 }
 
-if (!commandAvailable('pm2 --version')) {
-    console.log('准备安装pm2');
-    process.execSync('npm install -g pm2', { encoding: 'utf8', stdio: 'inherit' });
-    console.log('pm2安装成功!');
-}
-
 let needInstall = true;
 let needBuild = true;
 let needcloneUi = !fs.existsSync(uiSoucePath);
@@ -44,16 +38,9 @@ if (needInstall) {
     process.execSync('npm install', { stdio: 'inherit', cwd: projectRootPath });
 }
 
-const pm2AppPath = path.join(projectRootPath, config.pm2AppDir);
-
-if (needBuild || !fs.existsSync(pm2AppPath)) {
+if (needBuild) {
     process.execSync('npm run build', { stdio: 'inherit', cwd: projectRootPath });
-    fs.cpSync(distPath, pm2AppPath, { force: true, recursive: true })
-    const pm2Config = `module.exports=${JSON.stringify(config.ecosystemConfig)}`
-    fs.writeFileSync(path.join(pm2AppPath, 'ecosystem.config.js'), pm2Config, { encoding: 'utf8' });
 }
-
-
 
 if (needcloneUi) {
     cloneUi();
@@ -69,6 +56,8 @@ if (!fs.existsSync(webUiDirPath)) {
 
 
 fs.cpSync(path.join(projectRootPath, 'init_data', 'db',), path.join(os.homedir(), config.userHomeConfigDir), { force: false, recursive: true })
+
+console.log('installation completed');
 
 function commandAvailable(testCommand) {
     try {

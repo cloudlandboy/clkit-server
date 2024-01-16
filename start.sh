@@ -1,4 +1,4 @@
 #!/bin/bash
-node install.js
-cd dist_app/
-pm2 start
+rootPath="$(dirname "$0")";
+node $rootPath/install.js
+node $rootPath/app.js start

@@ -1,2 +1,3 @@
 #!/bin/bash
-pm2 stop clkit-server
+rootPath="$(dirname "$0")";
+node $rootPath/app.js stop

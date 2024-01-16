@@ -1,4 +1,4 @@
-import { execSync, spawn } from "child_process";
+import { exec, execSync, spawn } from "child_process";
 import { platform } from "os";
 import { decode } from 'iconv-lite';
 import * as sudo from "sudo-prompt";
@@ -11,6 +11,7 @@ export interface PlatformProcess {
     findPidByPort(port: number): Promise<PidInfo[]>;
     findPidByName(str: string): Promise<PidInfo[]>;
     findPidInfo(pid: number): Promise<PidInfo>;
+    openUrl(url:string):void;
 
 }
 
@@ -82,6 +83,10 @@ class Win32PlatformProcess implements PlatformProcess {
         }
     }
 
+    openUrl(url: string): void {
+        exec(`start ${url}`);
+    }
+
     private execSyncConvertResult(command: string): string {
         const result = execSync(command, { encoding: 'buffer', windowsHide: true });
         return decode(result, 'cp936');
@@ -130,6 +135,10 @@ class UnixPlatformProcess implements PlatformProcess {
         } catch (err) {
             return [];
         }
+    }
+
+    openUrl(url: string): void {
+        exec(`open ${url}`);
     }
 
     private sudoExec(command: string, resHandler?: (res: Function, stdout: string | Buffer) => void,

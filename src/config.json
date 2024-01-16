@@ -1,4 +1,6 @@
 {
+    "serverPort": 28288,
+    "daemonPort": 28289,
     "appName": "clkit-server",
     "uiDir": "./ui",
     "integrationInstallDir": "./ui/integration",
@@ -17,7 +19,7 @@
     "ecosystemConfig": {
         "apps": [
             {
-                "name": "clkit-server",
+                "name": "clkit",
                 "cwd": "./",
                 "script": "main.js",
                 "args": ""

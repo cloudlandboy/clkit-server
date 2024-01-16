@@ -23,4 +23,9 @@ export class AppController {
     update(@Body() dto: UpdateAppDto) {
         return this.appService.update(dto);
     }
+
+    @Post('stop')
+    stop(): void {
+        this.appService.stop();
+    }
 }

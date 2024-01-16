@@ -1,1 +1,1 @@
-pm2 stop clkit-server
+node ./app.js stop

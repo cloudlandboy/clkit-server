@@ -1,3 +1,2 @@
-node install.js
-cd dist_app/
-pm2 start
+node ./install.js
+node ./app.js start

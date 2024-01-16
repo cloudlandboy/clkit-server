@@ -4,11 +4,13 @@ import { join } from 'path';
 import { GithubService } from './github/github.service';
 import { execSync } from 'child_process';
 import { fileExists } from "./util/file-utils";
-import { getConfig, getAppRootPath, getRelativeAppRootPath } from "./util/app-utils";
+import { getConfig, getRelativeAppRootPath, startDaemonProcess, exitProcess } from "./util/app-utils";
 import { UpdateAppDto } from './common/dto/update-app.dto';
+import axios from "axios";
 
 @Injectable()
 export class AppService {
+
     constructor(private readonly githubService: GithubService) {
     }
 
@@ -49,10 +51,14 @@ export class AppService {
             cpSync(join(uiSourcePath, 'dist'), getRelativeAppRootPath(getConfig().uiDir), { force: true, recursive: true })
         }
         if (dto.updateServer) {
-            execSync('git pull', { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
-            execSync(`node install.js`, { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
-            execSync(`pm2 reload ${getConfig().appName}`, { cwd: getAppRootPath(), encoding: 'utf8', windowsHide: true });
+            startDaemonProcess().then(api => {
+                axios.get(`${api}/reboot`).then(res => process.exit(0));
+            })
         }
+    }
+
+    stop() {
+        exitProcess(0);
     }
 
     private getToUsePackageJsonPath() {
